@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shift Task Tracker</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/views.css">
+    <script src="js/config.js" defer></script>
+    <script src="js/lib/xlsx-utils.js" defer></script>
+    <script src="js/mock-data.js" defer></script>
+    <script src="js/store.js" defer></script>
+    <script src="js/modals.js" defer></script>
+    <script src="js/actions.js" defer></script>
+    <script src="js/views/shift.view.js" defer></script>
+    <script src="js/views/center.view.js" defer></script>
+    <script src="js/views/dev.view.js" defer></script>
+    <script src="js/views/staff-board.view.js" defer></script>
+    <script src="js/views/tracking.view.js" defer></script>
+    <script src="js/views/dashboard.view.js" defer></script>
+    <script src="js/views/attendance.view.js" defer></script>
+    <script src="js/views/admin.view.js" defer></script>
+    <script src="js/views/auth.view.js" defer></script>
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <!-- Standalone Auth / Login -->
+    <section id="authScreen" class="auth-screen hidden" aria-label="เข้าสู่ระบบ">
+        <div id="loginCard" class="auth-card">
+            <div class="auth-brand">
+                <div class="auth-brand-top">
+                    <h1>Shift Task Tracker</h1>
+                    <span class="prototype-tag auth-tag">Demo</span>
+                </div>
+                <p class="auth-subtitle">เข้าสู่ระบบด้วยรหัสพนักงานหรือ Username และรหัสผ่าน</p>
+            </div>
+
+            <div class="auth-mode-block">
+                <div id="loginAccessModeSwitch" class="mode-segmented" role="group" aria-label="เลือกโหมดเดโม">
+                    <button type="button" class="mode-seg-btn active" data-access-mode="strict">โหมดตรวจเวลากะ</button>
+                    <button type="button" class="mode-seg-btn" data-access-mode="free">โหมดอิสระ (ทุกกะ)</button>
+                </div>
+
+                <div id="loginTimeControlPanel" class="auth-time-panel">
+                    <div class="auth-time-top">
+                        <span id="loginClockModeBadge" class="att-clock-status">เวลาจริง</span>
+                        <div id="loginTimeStepper" class="time-stepper">
+                            <div class="time-part">
+                                <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="-1" aria-label="ลดชั่วโมง">&#9660;</button>
+                                <input id="loginClockHour" type="number" min="0" max="23" class="time-num-input" aria-label="ชั่วโมง">
+                                <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="1" aria-label="เพิ่มชั่วโมง">&#9650;</button>
+                            </div>
+                            <span class="time-colon">:</span>
+                            <div class="time-part">
+                                <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="-1" aria-label="ลดนาที">&#9660;</button>
+                                <input id="loginClockMinute" type="number" min="0" max="59" class="time-num-input" aria-label="นาที">
+                                <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="1" aria-label="เพิ่มนาที">&#9650;</button>
+                            </div>
+                        </div>
+                        <button id="loginUseRealClockBtn" type="button" class="btn btn-outline btn-xs hidden">ใช้เวลาจริง</button>
+                    </div>
+                    <div id="loginMockClockPresets" class="att-clock-presets">
+                        <button type="button" class="att-preset-btn" data-clock-preset="08:15">08:15 (ปกติ)</button>
+                        <button type="button" class="att-preset-btn" data-clock-preset="08:40">08:40 (สาย 10น.)</button>
+                        <button type="button" class="att-preset-btn" data-clock-preset="08:45">08:45 (สายมาก 15น.)</button>
+                        <button type="button" class="att-preset-btn" data-clock-preset="16:20">16:20 (กะเย็น)</button>
+                        <button type="button" class="att-preset-btn" data-clock-preset="00:20">00:20 (กะเช้า)</button>
+                    </div>
+                </div>
+                <p id="loginFreeModeHint" class="auth-free-hint hidden">
+                    โหมดอิสระ: สามารถเข้าสู่ระบบได้ทุกกะทุกเวลาโดยไม่ติดช่วงเวลากะ
+                </p>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <div class="form-field">
+                    <label for="loginUsername">รหัสพนักงาน / Username <span class="required">*</span></label>
+                    <input id="loginUsername" type="text" autocomplete="username" placeholder="เช่น 202601 หรือ somchai.a">
+                </div>
+                <div class="form-field">
+                    <label for="loginPassword">รหัสผ่าน <span class="required">*</span></label>
+                    <input id="loginPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่านเริ่มต้น 1234">
+                </div>
+                <p id="loginError" class="auth-error hidden"></p>
+                <button id="loginSubmitBtn" type="submit" class="btn btn-primary auth-submit-btn">เข้าสู่ระบบ</button>
+            </form>
+
+            <div id="loginQuickSection" class="auth-quick-section">
+                <div class="auth-quick-head">
+                    <span>คลิกเลือกบัญชีทดสอบ (รหัสเริ่มต้น <strong>1234</strong>)</span>
+                </div>
+                <div id="loginQuickUsers" class="auth-quick-grid"></div>
+            </div>
+
+            <div class="auth-footer-links auth-footer-end">
+                <button id="loginResetDemoBtn" type="button" class="btn btn-outline btn-sm">รีเซ็ตข้อมูลจำลอง</button>
+            </div>
+        </div>
+    </section>
+
+    <header id="appHeader" class="app-header">
+        <div class="header-inner">
+            <div class="brand-block">
+                <div class="brand-title-row">
+                    <h1>Shift Task Tracker</h1>
+                    <span class="prototype-tag">Demo</span>
+                </div>
+                <p class="brand-subtitle">ระบบจัดการงานข้ามกะ</p>
+            </div>
+
+            <div class="header-controls">
+                <div id="headerTimeControl" class="header-time-control" title="ปรับเวลาจำลอง 24 ชม. เพื่อทดสอบช่วงเวลากะ">
+                    <div id="headerTimeStepper" class="time-stepper time-stepper-dark">
+                        <div class="time-part">
+                            <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="-1" aria-label="ลดชั่วโมง">&#9660;</button>
+                            <input id="headerClockHour" type="number" min="0" max="23" class="time-num-input" aria-label="ชั่วโมง">
+                            <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="1" aria-label="เพิ่มชั่วโมง">&#9650;</button>
+                        </div>
+                        <span class="time-colon">:</span>
+                        <div class="time-part">
+                            <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="-1" aria-label="ลดนาที">&#9660;</button>
+                            <input id="headerClockMinute" type="number" min="0" max="59" class="time-num-input" aria-label="นาที">
+                            <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="1" aria-label="เพิ่มนาที">&#9650;</button>
+                        </div>
+                    </div>
+                    <button id="headerUseRealClockBtn" type="button" class="btn btn-outline-light btn-xs hidden" title="กลับไปใช้เวลาจริง">จริง</button>
+                </div>
+                <button id="headerAccessModeBtn" type="button" class="btn btn-outline-light btn-sm" title="สลับโหมดตรวจเวลากะ / โหมดอิสระทุกกะ">ตรวจเวลากะ</button>
+                <div class="user-switcher-group">
+                    <label for="userSwitcher">ผู้ใช้</label>
+                    <select id="userSwitcher" aria-label="สลับผู้ใช้งาน"></select>
+                </div>
+                <span id="currentRoleBadge" class="role-badge"></span>
+                <button id="changeOwnPasswordBtn" type="button" class="btn btn-outline-light btn-sm">เปลี่ยนรหัส</button>
+                <button id="logoutBtn" type="button" class="btn btn-outline-light btn-sm">ออกจากระบบ</button>
+                <button id="resetDemoBtn" type="button" class="btn btn-outline-light btn-sm" title="รีเซ็ตข้อมูลจำลอง">
+                    รีเซ็ต
+                </button>
+            </div>
+        </div>
+
+        <nav id="mainNav" class="main-nav" aria-label="เมนูหลัก">
+            <button id="tab-shift" type="button" class="nav-tab" data-view="view-shift">
+                งานในกะ
+            </button>
+            <button id="tab-center" type="button" class="nav-tab" data-view="view-center">
+                ถังกลาง
+                <span id="navCenterCount" class="nav-badge">0</span>
+            </button>
+            <button id="tab-dev" type="button" class="nav-tab" data-view="view-dev">
+                คิว Dev
+                <span id="navDevCount" class="nav-badge">0</span>
+            </button>
+            <button id="tab-staff-board" type="button" class="nav-tab" data-view="view-staff-board">
+                บอร์ดช่าง
+            </button>
+            <button id="tab-tracking" type="button" class="nav-tab" data-view="view-tracking">
+                Timeline
+            </button>
+            <button id="tab-dashboard" type="button" class="nav-tab" data-view="view-dashboard">
+                Dashboard
+            </button>
+            <button id="tab-attendance" type="button" class="nav-tab" data-view="view-attendance">
+                ประวัติเข้า-ออก
+            </button>
+            <button id="tab-admin" type="button" class="nav-tab" data-view="view-admin">
+                ตั้งค่าระบบ
+            </button>
+        </nav>
+    </header>
+
+    <main id="appMain" class="app-main">
+        <!-- 1. Shift Staff View -->
+        <section id="view-shift" class="view" data-view="view-shift">
+            <div class="panel duty-bar">
+                <div class="duty-profile-wrap">
+                    <div id="shiftUserAvatar" class="staff-avatar staff-avatar-sm"></div>
+                    <div class="duty-info">
+                        <div class="duty-title-row">
+                            <span id="shiftDutyBadge" class="duty-badge"></span>
+                            <h2 id="shiftDutyTitle">กะการทำงาน</h2>
+                        </div>
+                        <p id="shiftDutyMeta" class="muted"></p>
+                    </div>
+                </div>
+                <div class="duty-actions">
+                    <button id="openStaffBoardShortcutBtn" type="button" class="btn btn-outline btn-sm">บอร์ดช่าง</button>
+                    <button id="startShiftBtn" type="button" class="btn btn-primary btn-sm">เริ่มกะ</button>
+                    <button id="endShiftBtn" type="button" class="btn btn-danger btn-sm">จบกะ</button>
+                    <button id="switchNextShiftBtn" type="button" class="btn btn-secondary btn-sm hidden">สลับไปกะถัดไป</button>
+                </div>
+            </div>
+
+            <div class="summary-grid summary-4">
+                <div class="kpi-card">
+                    <span class="kpi-label">ทั้งหมดในกะ</span>
+                    <p id="shiftTotalCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <span class="kpi-label">เสร็จแล้ว</span>
+                    <p id="shiftClosedCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <span class="kpi-label">ยังค้าง</span>
+                    <p id="shiftOpenCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-accent">
+                    <span class="kpi-label">ถังกลาง</span>
+                    <p id="shiftCenterWaitingCount" class="kpi-value">0</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>รับงานใหม่</h2>
+                </div>
+                <form id="createTicketForm" class="create-ticket-form">
+                    <div class="form-field form-branch">
+                        <label for="newTicketBranch">สาขา <span class="required">*</span></label>
+                        <select id="newTicketBranch" aria-label="เลือกสาขา"></select>
+                    </div>
+                    <div class="form-field form-detail">
+                        <label for="newTicketDetail">รายละเอียดปัญหา <span class="required">*</span></label>
+                        <input id="newTicketDetail" type="text" placeholder="ระบุปัญหา เช่น POS ค้าง, เน็ตหลุด...">
+                    </div>
+                    <div class="form-field form-submit">
+                        <button id="createTicketBtn" type="submit" class="btn btn-primary">+ รับงาน</button>
+                    </div>
+                </form>
+                <p id="createTicketDisabledHint" class="inline-warning hidden">
+                    กด "เริ่มกะ" ด้านบนก่อนรับงานหรือจัดการงาน
+                </p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>รายการงานในกะ</h2>
+                    <div class="panel-actions">
+                        <select id="shiftTaskFilter" aria-label="กรองรายการงานในกะ">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="open">กำลังทำ</option>
+                            <option value="closed">ปิดแล้ว</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>สาขา</th>
+                                <th>ปัญหา</th>
+                                <th>เปิดเมื่อ</th>
+                                <th>ค้าง</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shiftTaskList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Center Queue View -->
+        <section id="view-center" class="view hidden" data-view="view-center">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>ถังกลาง (Center)</h2>
+                    <div class="panel-actions">
+                        <button id="pickUpAllBtn" type="button" class="btn btn-success btn-sm">รับทั้งหมด (0)</button>
+                    </div>
+                </div>
+
+                <div id="centerOffDutyHint" class="inline-warning hidden" style="margin-top:0; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span id="centerOffDutyText">กดเริ่มกะก่อนรับงาน</span>
+                    <button id="centerQuickStartShiftBtn" type="button" class="btn btn-primary btn-sm">เริ่มกะ</button>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label for="centerFilterBranch">สาขา</label>
+                        <select id="centerFilterBranch" aria-label="กรองถังกลางตามสาขา"></select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="centerFilterReason">เหตุผล</label>
+                        <select id="centerFilterReason" aria-label="กรองถังกลางตามเหตุผลงานค้าง"></select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>สาขา</th>
+                                <th>ปัญหา</th>
+                                <th>จาก</th>
+                                <th>เหตุผล / หมายเหตุ</th>
+                                <th>ค้าง</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="centerQueueList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Dev Team View -->
+        <section id="view-dev" class="view hidden" data-view="view-dev">
+            <div class="panel dev-info-bar">
+                <h2>คิวทีมพัฒนา (Dev)</h2>
+                <span class="role-hours-pill">08.00–17.00 น.</span>
+            </div>
+
+            <div class="summary-grid summary-3">
+                <div class="kpi-card kpi-purple">
+                    <span class="kpi-label">รอรับเรื่อง</span>
+                    <p id="devQueueCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <span class="kpi-label">กำลังแก้ไข</span>
+                    <p id="devProgressCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <span class="kpi-label">ปิดแล้ว</span>
+                    <p id="devClosedCount" class="kpi-value">0</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>รายการงานทีม Dev</h2>
+                    <div class="panel-actions">
+                        <select id="devFilterStatus" aria-label="กรองคิวงานทีม Dev">
+                            <option value="active">งานค้าง</option>
+                            <option value="closed">ปิดแล้ว</option>
+                            <option value="all">ทั้งหมด</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>สาขา</th>
+                                <th>ปัญหา</th>
+                                <th>จาก</th>
+                                <th>อาการ / อัปเดตล่าสุด</th>
+                                <th>ค้าง</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devQueueList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Tracking & Timeline View -->
+        <section id="view-tracking" class="view hidden" data-view="view-tracking">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>ติดตามงาน &amp; Timeline</h2>
+                </div>
+                <div class="filter-bar" style="margin-bottom:0;">
+                    <div class="filter-item filter-grow">
+                        <label for="trackingSearch">ค้นหา</label>
+                        <input id="trackingSearch" type="search" placeholder="ค้นหารหัสงาน สาขา ปัญหา หรือชื่อ...">
+                    </div>
+                    <div class="filter-item">
+                        <label for="trackingFilterBranch">สาขา</label>
+                        <select id="trackingFilterBranch" aria-label="กรองสาขาหน้าติดตามงาน"></select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="trackingFilterStatus">สถานะ</label>
+                        <select id="trackingFilterStatus" aria-label="กรองสถานะหน้าติดตามงาน"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tracking-layout">
+                <div class="panel tracking-list-panel">
+                    <div class="panel-subheader">
+                        <h3>ใบงาน (<span id="trackingResultCount">0</span>)</h3>
+                    </div>
+                    <div id="trackingTicketList" class="tracking-ticket-list"></div>
+                </div>
+
+                <div class="panel tracking-detail-panel">
+                    <div id="trackingTimelinePanel"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. INA Dashboard View -->
+        <section id="view-dashboard" class="view hidden" data-view="view-dashboard">
+            <div class="panel dash-header-panel">
+                <div class="panel-header">
+                    <div class="dash-title-row">
+                        <h2>Dashboard (INA)</h2>
+                        <span class="live-pill"><span class="live-dot"></span> เรียลไทม์</span>
+                    </div>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom:0;">
+                    <div class="filter-item">
+                        <label for="dashFilterBranch">สาขา</label>
+                        <select id="dashFilterBranch" aria-label="กรอง Dashboard ตามสาขา"></select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="dashFilterReason">สาเหตุที่รอ</label>
+                        <select id="dashFilterReason" aria-label="กรอง Dashboard ตามสาเหตุที่รอ"></select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="dashFilterStatus">สถานะ</label>
+                        <select id="dashFilterStatus" aria-label="กรอง Dashboard ตามสถานะ"></select>
+                    </div>
+                    <div class="filter-item filter-btn-wrap">
+                        <button id="dashResetFilterBtn" type="button" class="btn btn-secondary btn-sm">ล้างตัวกรอง</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-grid summary-6">
+                <div class="kpi-card">
+                    <span class="kpi-label">ทั้งหมด</span>
+                    <p id="dashTotalCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <span class="kpi-label">งานค้าง</span>
+                    <p id="dashOpenTotalCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-accent">
+                    <span class="kpi-label">ถังกลาง</span>
+                    <p id="dashCenterCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-purple">
+                    <span class="kpi-label">ทีม Dev</span>
+                    <p id="dashDevCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <span class="kpi-label">ปิดแล้ว</span>
+                    <p id="dashClosedCount" class="kpi-value">0</p>
+                    <span id="dashClosedRate" class="kpi-sub">0%</span>
+                </div>
+                <div class="kpi-card kpi-danger">
+                    <span class="kpi-label">ค้าง ≥ 2 กะ</span>
+                    <p id="dashChronicCount" class="kpi-value">0</p>
+                </div>
+            </div>
+
+            <div class="dash-analytics-grid">
+                <div class="panel">
+                    <div class="panel-subheader">
+                        <h3>งานค้างตามสาขา</h3>
+                        <span class="muted">คลิกเพื่อกรอง</span>
+                    </div>
+                    <div id="dashByBranch" class="analytics-block"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-subheader">
+                        <h3>งานค้างตามสาเหตุ</h3>
+                        <span class="muted">คลิกเพื่อกรอง</span>
+                    </div>
+                    <div id="dashByReason" class="analytics-block"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>งานค้างทั้งหมด</h2>
+                        <p id="dashActiveFilterLabel" class="hint"></p>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>สาขา</th>
+                                <th>ปัญหา</th>
+                                <th>สถานะ</th>
+                                <th>อยู่ที่</th>
+                                <th>สาเหตุ / หมายเหตุ</th>
+                                <th>ค้าง</th>
+                                <th>ประวัติ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashBacklogList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Admin / Supervisor View -->
+        <section id="view-admin" class="view hidden" data-view="view-admin">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>ตั้งค่าระบบ (Admin)</h2>
+                </div>
+
+                <div id="adminSubTabs" class="sub-tabs">
+                    <button type="button" class="sub-tab active" data-admin-tab="users">ผู้ใช้งาน</button>
+                    <button type="button" class="sub-tab" data-admin-tab="branches">สาขา</button>
+                    <button type="button" class="sub-tab" data-admin-tab="reasons">เหตุผลงานค้าง</button>
+                </div>
+            </div>
+
+            <!-- Admin: Users -->
+            <div id="admin-panel-users" class="panel admin-subpanel">
+                <h3>ผู้ใช้งาน</h3>
+                <form id="adminUserForm" class="admin-form">
+                    <input id="adminUserId" type="hidden">
+                    <div class="form-field">
+                        <label for="adminUserName">ชื่อ-นามสกุล <span class="required">*</span></label>
+                        <input id="adminUserName" type="text" placeholder="เช่น สมชาย ใจดี">
+                    </div>
+                    <div class="form-field">
+                        <label for="adminUserUsername">Username <span class="required">*</span></label>
+                        <input id="adminUserUsername" type="text" placeholder="เช่น somchai.a">
+                    </div>
+                    <div class="form-field">
+                        <label for="adminUserRole">บทบาท <span class="required">*</span></label>
+                        <select id="adminUserRole">
+                            <option value="shift">พนักงานกะ</option>
+                            <option value="dev">ทีม Dev • 08.00–17.00 น.</option>
+                            <option value="admin">Admin / หัวหน้างาน</option>
+                        </select>
+                    </div>
+                    <div id="adminUserShiftGroup" class="form-field">
+                        <label for="adminUserShift">กะ <span class="required">*</span></label>
+                        <select id="adminUserShift">
+                            <option value="A">กะกลางวัน (08.30–17.30 น.)</option>
+                            <option value="B">กะเย็น (16.30–01.30 น.)</option>
+                            <option value="C">กะเช้า (00.30–09.30 น.)</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-actions">
+                        <button id="adminUserSubmitBtn" type="submit" class="btn btn-primary">เพิ่มผู้ใช้</button>
+                        <button id="adminImportExcelBtn" type="button" class="btn btn-success">นำเข้า Excel</button>
+                        <button id="adminDownloadTemplateBtn" type="button" class="btn btn-outline">ตัวอย่าง .xlsx</button>
+                        <button id="adminUserCancelBtn" type="button" class="btn btn-secondary hidden">ยกเลิก</button>
+                        <input id="adminImportExcelInput" type="file" accept=".xlsx,.csv" class="hidden" aria-label="เลือกไฟล์ Excel รายชื่อพนักงาน">
+                    </div>
+                </form>
+                <p class="admin-excel-hint">
+                    คอลัมน์ Excel: <code>รหัส</code>, <code>ชื่อ</code>, <code>บทบาท</code> (ไม่ใส่=พนักงานกะ), <code>กะ</code> (กลางวัน / เย็น / เช้า หรือ 08.30-17.30)
+                </p>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อ</th>
+                                <th>Username</th>
+                                <th>บทบาท</th>
+                                <th>เวลาทำงาน</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminUserList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin: Branches -->
+            <div id="admin-panel-branches" class="panel admin-subpanel hidden">
+                <h3>สาขา</h3>
+                <form id="adminBranchForm" class="admin-form">
+                    <input id="adminBranchId" type="hidden">
+                    <div class="form-field">
+                        <label for="adminBranchCode">รหัสสาขา <span class="required">*</span></label>
+                        <input id="adminBranchCode" type="text" placeholder="เช่น BKK-04">
+                    </div>
+                    <div class="form-field form-grow">
+                        <label for="adminBranchName">ชื่อสาขา <span class="required">*</span></label>
+                        <input id="adminBranchName" type="text" placeholder="เช่น สาขาอโศก">
+                    </div>
+                    <div class="admin-form-actions">
+                        <button id="adminBranchSubmitBtn" type="submit" class="btn btn-primary">เพิ่มสาขา</button>
+                        <button id="adminBranchCancelBtn" type="button" class="btn btn-secondary hidden">ยกเลิก</button>
+                    </div>
+                </form>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>ชื่อสาขา</th>
+                                <th>ทั้งหมด</th>
+                                <th>ค้างอยู่</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminBranchList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin: Pending Reasons -->
+            <div id="admin-panel-reasons" class="panel admin-subpanel hidden">
+                <h3>เหตุผลงานค้าง</h3>
+                <form id="adminReasonForm" class="admin-form">
+                    <input id="adminReasonId" type="hidden">
+                    <div class="form-field form-grow">
+                        <label for="adminReasonLabel">ชื่อเหตุผล <span class="required">*</span></label>
+                        <input id="adminReasonLabel" type="text" placeholder="เช่น รอผู้จัดการอนุมัติ">
+                    </div>
+                    <div class="admin-form-actions">
+                        <button id="adminReasonSubmitBtn" type="submit" class="btn btn-primary">เพิ่มเหตุผล</button>
+                        <button id="adminReasonCancelBtn" type="button" class="btn btn-secondary hidden">ยกเลิก</button>
+                    </div>
+                </form>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>รหัส</th>
+                                <th>เหตุผล</th>
+                                <th>รออยู่</th>
+                                <th>สถานะ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminReasonList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Staff Profile & Workload Board View -->
+        <section id="view-staff-board" class="view hidden" data-view="view-staff-board">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>บอร์ดช่างในกะ</h2>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom:0;">
+                    <div class="filter-item">
+                        <label for="staffBoardGroupFilter">กะ</label>
+                        <select id="staffBoardGroupFilter" aria-label="กรองตามกะทำงาน">
+                            <option value="active-shift">กำลังเข้างาน</option>
+                            <option value="A">กะกลางวัน (08.30–17.30 น.)</option>
+                            <option value="B">กะเย็น (16.30–01.30 น.)</option>
+                            <option value="C">กะเช้า (00.30–09.30 น.)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="staffBoardTaskStatusFilter">สถานะ</label>
+                        <select id="staffBoardTaskStatusFilter" aria-label="กรองสถานะรายการงานในการ์ด">
+                            <option value="all">ทุกสถานะ</option>
+                            <option value="open">ยังไม่ปิด</option>
+                            <option value="closed">ปิดแล้ว</option>
+                        </select>
+                    </div>
+                    <div class="filter-item filter-grow">
+                        <label for="staffBoardSearch">ค้นหา</label>
+                        <input id="staffBoardSearch" type="search" placeholder="ชื่อช่าง รหัส หรือใบงาน...">
+                    </div>
+                </div>
+            </div>
+
+            <div id="staffBoardSummaryBar" class="summary-grid summary-4">
+                <div class="kpi-card">
+                    <span class="kpi-label">ช่างในกะ</span>
+                    <p id="staffBoardTotalStaff" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <span class="kpi-label">เข้ากะอยู่</span>
+                    <p id="staffBoardOnDutyCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <span class="kpi-label">กำลังทำ</span>
+                    <p id="staffBoardActiveTasksCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-accent">
+                    <span class="kpi-label">ปิดแล้ว</span>
+                    <p id="staffBoardClosedTasksCount" class="kpi-value">0</p>
+                </div>
+            </div>
+
+            <div id="staffBoardGrid" class="staff-board-grid"></div>
+        </section>
+
+        <!-- 8. Login / Logout History View -->
+        <section id="view-attendance" class="view hidden" data-view="view-attendance">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>ประวัติเข้า-ออกระบบ (Login / Logout)</h2>
+                        <p class="hint">เกณฑ์เข้างาน: ก่อนเวลากะ 30 นาที–เวลาเริ่มกะ = เข้างานปกติ • สาย 1–10 นาที = สาย (ส้ม) • เกิน 10 นาที = สายมาก (แดง)</p>
+                    </div>
+                    <div class="att-clock-strip">
+                        <span id="attClockStatusText" class="att-clock-status">เวลาจริง: --:--</span>
+                        <div id="attTimeStepper" class="time-stepper">
+                            <div class="time-part">
+                                <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="-1" aria-label="ลดชั่วโมง">&#9660;</button>
+                                <input id="attClockHour" type="number" min="0" max="23" class="time-num-input" aria-label="ชั่วโมง">
+                                <button type="button" class="time-arrow" data-step-unit="hour" data-step-dir="1" aria-label="เพิ่มชั่วโมง">&#9650;</button>
+                            </div>
+                            <span class="time-colon">:</span>
+                            <div class="time-part">
+                                <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="-1" aria-label="ลดนาที">&#9660;</button>
+                                <input id="attClockMinute" type="number" min="0" max="59" class="time-num-input" aria-label="นาที">
+                                <button type="button" class="time-arrow" data-step-unit="minute" data-step-dir="1" aria-label="เพิ่มนาที">&#9650;</button>
+                            </div>
+                        </div>
+                        <div id="attClockPresets" class="att-clock-presets">
+                            <button type="button" class="att-preset-btn" data-clock-preset="08:40">08:40</button>
+                            <button type="button" class="att-preset-btn" data-clock-preset="08:45">08:45</button>
+                            <button type="button" class="att-preset-btn" data-clock-preset="17:30">17:30</button>
+                            <button type="button" class="att-preset-btn" data-clock-preset="01:30">01:30</button>
+                        </div>
+                        <button id="attUseRealClockBtn" type="button" class="btn btn-outline btn-xs hidden">ใช้เวลาจริง</button>
+                    </div>
+                </div>
+
+                <div class="filter-bar" style="margin-bottom:0;">
+                    <div class="filter-item">
+                        <label for="attendanceFilterShift">กะ / กลุ่มงาน</label>
+                        <select id="attendanceFilterShift" aria-label="กรองประวัติเข้า-ออกตามกะ">
+                            <option value="">ทุกกะ / ทุกบทบาท</option>
+                            <option value="A">กะกลางวัน (08.30–17.30 น.)</option>
+                            <option value="B">กะเย็น (16.30–01.30 น.)</option>
+                            <option value="C">กะเช้า (00.30–09.30 น.)</option>
+                            <option value="dev">ทีม Dev (08.00–17.00 น.)</option>
+                            <option value="admin">Admin / หัวหน้างาน</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="attendanceFilterStatus">สถานะเข้างาน</label>
+                        <select id="attendanceFilterStatus" aria-label="กรองตามสถานะเข้างาน">
+                            <option value="">ทั้งหมด</option>
+                            <option value="normal">เข้างานปกติ</option>
+                            <option value="late">สาย (1–10 นาที)</option>
+                            <option value="very_late">สายมาก (&gt;10 นาที)</option>
+                            <option value="too_early">ก่อนเวลากะ (&gt;30 นาที)</option>
+                            <option value="online">กำลังใช้งานอยู่</option>
+                            <option value="logged_out">ออกระบบแล้ว</option>
+                        </select>
+                    </div>
+                    <div class="filter-item filter-grow">
+                        <label for="attendanceSearch">ค้นหา</label>
+                        <input id="attendanceSearch" type="search" placeholder="ชื่อพนักงาน รหัสพนักงาน หรือกะ...">
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-grid summary-5">
+                <div class="kpi-card">
+                    <span class="kpi-label">รายการทั้งหมด</span>
+                    <p id="attTotalCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-accent">
+                    <span class="kpi-label">กำลังใช้งานอยู่</span>
+                    <p id="attOnlineCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-success">
+                    <span class="kpi-label">เข้างานปกติ</span>
+                    <p id="attNormalCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-warning">
+                    <span class="kpi-label">สาย (1–10 น.)</span>
+                    <p id="attLateCount" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card kpi-danger">
+                    <span class="kpi-label">สายมาก (&gt;10 น.)</span>
+                    <p id="attVeryLateCount" class="kpi-value">0</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ลำดับ</th>
+                                <th>รหัส</th>
+                                <th>ผู้ใช้งาน</th>
+                                <th>กะ / บทบาท</th>
+                                <th>เวลาเข้า (Login)</th>
+                                <th>เวลาออก (Logout)</th>
+                                <th>ระยะเวลา</th>
+                                <th>สถานะเข้างาน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceLogList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="appFooter" class="app-footer">
+        Shift Task Tracker • Demo
+    </footer>
+
+    <!-- Reusable Modal -->
+    <div id="modalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div id="modalDialog" class="modal-dialog">
+            <div class="modal-header">
+                <h3 id="modalTitle">หัวข้อ</h3>
+                <button id="modalCloseBtn" type="button" class="modal-close" aria-label="ปิดหน้าต่าง">&times;</button>
+            </div>
+            <div id="modalBody" class="modal-body"></div>
+        </div>
+    </div>
+</body>
+</html>
